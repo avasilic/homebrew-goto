@@ -7,10 +7,10 @@ class GotoSsh < Formula
 
   def install
 	arch = Hardware::CPU.arm? ? "arm" : "x86"
-	bin.install "gg-mac-#{arch}" => "goto-ssh"
+	bin.install "gg-mac-#{arch}" => "gg"
   end
 
   test do
-  	assert_match "goto", shell_output("#{bin}/goto --help")
+    assert_match "gg", shell_output("#{bin}/gg --help")
   end
 end
