@@ -1,0 +1,40 @@
+name: Auto-update goto formula
+
+on:
+    schedule:
+        - cron: "0 8 * * *" # every day at 8 AM UTC
+    workflow_dispatch: # allow manual trigger
+
+jobs:
+    update:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout tap repo
+              uses: actions/checkout@v3
+
+            - name: Fetch latest release info
+              id: latest
+              uses: pozetroninc/github-action-get-latest-release@v0.6.0
+              with:
+                  repository: grafviktor/goto
+
+            - name: Download release archive
+              run: |
+                  VERSION=${{ steps.latest.outputs.release }}
+                  FILE="goto-${VERSION}.zip"
+                  curl -L -o "$FILE" "https://github.com/grafviktor/goto/releases/download/${VERSION}/$FILE"
+                  SHA=$(shasum -a 256 "$FILE" | cut -d ' ' -f1)
+                  echo "VERSION=$VERSION" >> $GITHUB_ENV
+                  echo "SHA=$SHA" >> $GITHUB_ENV
+
+            - name: Update Formula
+              run: |
+                  sed -i "s|url \".*\"|url \"https://github.com/grafviktor/goto/releases/download/${VERSION}/goto-${VERSION}.zip\"|" Formula/goto.rb
+                  sed -i "s|sha256 \".*\"|sha256 \"${SHA}\"|" Formula/goto.rb
+
+            - name: Commit and Push
+              run: |
+                  git config user.name "github-actions"
+                  git config user.email "github-actions@github.com"
+                  git commit -am "Update goto to $VERSION"
+                  git push

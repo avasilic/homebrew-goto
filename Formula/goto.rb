@@ -6,7 +6,8 @@ class Goto < Formula
   license "MIT"
 
   def install
-    bin.install "goto"
+    arch = Hardware::CPU.arm? ? "arm" : "x86"
+    bin.install "gg-mac-#{arch}" => "goto"
   end
 
   test do
