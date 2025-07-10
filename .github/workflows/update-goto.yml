@@ -29,8 +29,8 @@ jobs:
 
             - name: Update Formula
               run: |
-                  sed -i "s|url \".*\"|url \"https://github.com/grafviktor/goto/releases/download/${VERSION}/goto-${VERSION}.zip\"|" Formula/goto.rb
-                  sed -i "s|sha256 \".*\"|sha256 \"${SHA}\"|" Formula/goto.rb
+                  sed -i "s|url \".*\"|url \"https://github.com/grafviktor/goto/releases/download/${VERSION}/goto-${VERSION}.zip\"|" Formula/goto-ssh.rb
+                  sed -i "s|sha256 \".*\"|sha256 \"${SHA}\"|" Formula/goto-ssh.rb
 
             - name: Commit and Push
               run: |

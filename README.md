@@ -6,5 +6,5 @@ A Homebrew formula for [grafviktor/goto](https://github.com/grafviktor/goto)
 
 ```sh
 brew tap avasilic/goto
-brew install goto
+brew install goto-ssh
 ```
