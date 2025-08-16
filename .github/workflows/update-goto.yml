@@ -1,40 +1,69 @@
 name: Auto-update goto formula
 
 on:
-    schedule:
-        - cron: "0 8 * * *" # every day at 8 AM UTC
-    workflow_dispatch: # allow manual trigger
+  schedule:
+    - cron: "0 8 * * *" # every day at 8 AM UTC
+  workflow_dispatch: # allow manual trigger
 
 jobs:
-    update:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout tap repo
-              uses: actions/checkout@v3
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tap repo
+        uses: actions/checkout@v3
 
-            - name: Fetch latest release info
-              id: latest
-              uses: pozetroninc/github-action-get-latest-release@v0.6.0
-              with:
-                  repository: grafviktor/goto
+      - name: Fetch latest release info
+        id: latest
+        uses: pozetroninc/github-action-get-latest-release@v0.6.0
+        with:
+          repository: grafviktor/goto
 
-            - name: Download release archive
-              run: |
-                  VERSION=${{ steps.latest.outputs.release }}
-                  FILE="goto-${VERSION}.zip"
-                  curl -L -o "$FILE" "https://github.com/grafviktor/goto/releases/download/${VERSION}/$FILE"
-                  SHA=$(shasum -a 256 "$FILE" | cut -d ' ' -f1)
-                  echo "VERSION=$VERSION" >> $GITHUB_ENV
-                  echo "SHA=$SHA" >> $GITHUB_ENV
+      - name: Check if update is needed
+        id: check_update
+        run: |
+          VERSION=${{ steps.latest.outputs.release }}
+          CURRENT_VERSION=$(grep -o 'releases/download/[^/]*/goto-[^/]*\.zip' Formula/goto-ssh.rb | sed 's|releases/download/||; s|/goto-.*||')
+          echo "Latest version: $VERSION"
+          echo "Current version: $CURRENT_VERSION"
+          if [ "$VERSION" = "$CURRENT_VERSION" ]; then
+            echo "No update needed"
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Update needed: $CURRENT_VERSION -> $VERSION"
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-            - name: Update Formula
-              run: |
-                  sed -i "s|url \".*\"|url \"https://github.com/grafviktor/goto/releases/download/${VERSION}/goto-${VERSION}.zip\"|" Formula/goto-ssh.rb
-                  sed -i "s|sha256 \".*\"|sha256 \"${SHA}\"|" Formula/goto-ssh.rb
+      - name: Download release archive
+        if: steps.check_update.outputs.update_needed == 'true'
+        run: |
+          VERSION=${{ env.VERSION }}
+          FILE="goto-${VERSION}.zip"
+          curl -L -o "$FILE" "https://github.com/grafviktor/goto/releases/download/${VERSION}/$FILE"
+          SHA=$(shasum -a 256 "$FILE" | cut -d ' ' -f1)
+          echo "SHA=$SHA" >> $GITHUB_ENV
 
-            - name: Commit and Push
-              run: |
-                  git config user.name "github-actions"
-                  git config user.email "github-actions@github.com"
-                  git commit -am "Update goto to $VERSION"
-                  git push
+      - name: Update Formula
+        if: steps.check_update.outputs.update_needed == 'true'
+        run: |
+          sed -i "s|url \".*\"|url \"https://github.com/grafviktor/goto/releases/download/${VERSION}/goto-${VERSION}.zip\"|" Formula/goto-ssh.rb
+          sed -i "s|sha256 \".*\"|sha256 \"${SHA}\"|" Formula/goto-ssh.rb
+
+      - name: Commit and Push
+        if: steps.check_update.outputs.update_needed == 'true'
+        run: |
+          # Add any goto-* zip files to git
+          git add goto-*.zip || true
+          git add Formula/goto-ssh.rb
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Update goto to $VERSION"
+          git push

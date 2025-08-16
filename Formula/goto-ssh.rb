@@ -6,8 +6,8 @@ class GotoSsh < Formula
   license "MIT"
 
   def install
-	arch = Hardware::CPU.arm? ? "arm" : "x86"
-	bin.install "gg-mac-#{arch}" => "gg"
+    arch = Hardware::CPU.arm? ? "arm" : "x86"
+    bin.install "gg-mac-#{arch}" => "gg"
   end
 
   test do
